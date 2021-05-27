@@ -604,16 +604,6 @@ def robot_page(robot_name):
     fig_error_pie.update_traces(textinfo='percent+value')
     fig_error_pie.update_layout(xaxis_range=[start_date, end_date])
     st.plotly_chart(fig_error_pie,use_container_width=True)        
-
-    # ml = get_mission_log(robot_name)
-    # st.subheader(f"{robot_name}'s mission log")
-    # st.write(ml)
-    # st.markdown(create_download_link(ml, robot_name=robot_name, title=f"Download {robot_name}'s mission log as CSV", streamlit='True'), unsafe_allow_html=True)
-    
-    # st.subheader(f"{robot_name}'s error log")
-    # st.write(error_log(robot_name))
-    # st.markdown(create_download_link(error_log(robot_name), robot_name=robot_name, title=f"Download {robot_name}'s error log as CSV", streamlit='True'), unsafe_allow_html=True)
-    st.write(get_robot_mission_count(robot_name))
         # except:
         #     st.warning(f"Oops, `{robot_name}` is not available at the moment.")
     
@@ -809,6 +799,7 @@ def fleet_page():
         if checkbox_utilization:
             # st.write(get_robots_utilization())
             st.write(get_robots_utilization())
+
         ###################### Utilization_robots_type ######################
         st.subheader(f'Utilization Per Robot Type Over Last {delta_date} Days')
         st.markdown(f"*Definition* of **Utilization**:\
@@ -846,7 +837,18 @@ def fleet_page():
         st.subheader(f'Robots Traveled Distance Per Robot over {delta_date} Days')
         fig_distance_robot = px.bar(get_all_robots_distance(), x='date', y='distance',
                 color='robot_name', labels={'distance':'Distance (km)'},
-                barmode='group', title='Distance Traveled Per Robots')
+                barmode='group', title='Distance Traveled Per Robots'
+                ,color_discrete_map={
+                                "MiR_S1073 (MiR_200)":"rgb(255,51,51)",
+                                "MiR_S1166 (MiR_200)":"rgb(255,153,51)",
+                                "MiR_S1167 (MiR_200)":"rgb(255,255,0)",
+                                "MiR_S1168 (MiR_200)":"rgb(0,204,0)",
+                                "MiR_S1169 (MiR_200)": "rgb(0,204,102)",
+                                "MiR_S1170 (MiR_200)": "rgb(0,204,204)",
+                                "MiR_U0221 (MiR_500)": "rgb(0,128,255)",
+                                "MiR_U0197 (MiR_500)": "rgb(51,51,255)",
+                                "MiR_U0207 (MiR_500)": "rgb(217,0,255)",
+                                "MiR_U0224 (MiR_500)": "rgb(255,102,178)"})
         fig_distance_robot.update_layout(xaxis_range=[start_date, end_date])
         st.plotly_chart(fig_distance_robot,use_container_width=True)
         checkbox_dist_robot = st.checkbox("Show Data", key='checkbox_dist_robot')
@@ -1005,8 +1007,11 @@ def fleet_page():
 
         st.info(f"It took {convert(time.time() - start_time)}")
 
+
+    else:
+        st.balloons()
+        st.error("Error! The input **Start Date** is later than the **End Date**")
+       
+    
         # except:
         #     st.warning("Oops, the MiR Fleet is not available at the moment.")
-    else:
-        st.error("Error! The input **Start Date** is later than the **End Date**")
-    
