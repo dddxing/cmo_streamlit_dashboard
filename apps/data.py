@@ -82,6 +82,10 @@ def pull_distance(robot_name):
     df['distance'] = df['distance'].diff()
     df = df.dropna()
     df = df.reset_index()
+    if "U" in robot_name:
+        df["robot_name"] = robot_name+" (MiR_500)"
+    elif "S" in robot_name:
+        df["robot_name"] = robot_name+" (MiR_200)"
     return df
 
 def error_log_id(robot_name):
@@ -217,7 +221,19 @@ def get_all_robots_distance():
             df_all = df_all.append(df, ignore_index=True)
         except:
             pass
+    df_all["robot_type"] = 'x'
+    for row in range(len(df_all)):
+        for key in category:
+            if (df_all['robot_name'][row] in category[key]):
+                df_all['robot_type'][row] = key
     return df_all
+
+def get_all_robots_distance_type():
+    df = get_all_robots_distance()
+    df = df.set_index('date')
+    df = df.groupby(['robot_type']).resample('D').sum()
+    df = df.reset_index()
+    return df
 
 @st.cache(allow_output_mutation=True)
 def get_robots_mission_log():
@@ -398,6 +414,21 @@ def groupby_mission_count(groupby):
     df = df.reset_index()
     return df
 
+def get_robot_mission_count(robot_name):
+    df = get_mission_log(robot_name)
+    df['date'] = pd.to_datetime(df['finished'],format='%Y-%m-%dT%H:%M:%S')
+    df = df.set_index("date")
+    if "S" in robot_name:
+        df = df.copy().loc[df.mission_id.isin(SBD_missions_200)]
+    if "U" in robot_name:
+        df = df.copy().loc[df.mission_id.isin(SBD_missions_500)]
+    df = df.groupby(['state']).resample('D').count()
+    df = df[['ordered']]
+    df = df.rename(columns={'ordered' : "count"})
+    df = df.reset_index()
+    return df
+
+
 def get_robot_type_utilization():
     s_in_day = int(num_shift) * int(shift_hour) * 3600
     df = get_robots_mission_log()
@@ -432,6 +463,30 @@ def last_error(day,robot_type):
 def last_error_time(day,robot_type):
     df = get_robots_error_log()
     df = df[df.robot_type == robot_type]
+    df['time'] = pd.to_datetime(df['time'],format='%Y-%m-%dT%H:%M:%S')
+    df = df.sort_values(by=['time'])
+    df = df.set_index("time")  
+    df = df.last(f"{day}D")
+    df = df.groupby("module").resample("D").count()
+    df = df[["description"]]
+    df = df.rename(columns={"description":"count"})
+    df = df.reset_index()
+    return df
+
+def robot_last_error(robot_name,day):
+    df = error_log(robot_name)
+    df['time'] = pd.to_datetime(df['time'],format='%Y-%m-%dT%H:%M:%S')
+    df = df.sort_values(by=['time'])
+    df = df.set_index("time")  
+    df = df.last(f"{day}D")
+    df = df.groupby("module").count()
+    df = df.reset_index()
+    df = df[["module", "description"]]
+    df = df.rename(columns={"description":"count"})
+    return df
+
+def robot_last_error_time(robot_name, day):
+    df = error_log(robot_name)
     df['time'] = pd.to_datetime(df['time'],format='%Y-%m-%dT%H:%M:%S')
     df = df.sort_values(by=['time'])
     df = df.set_index("time")  
@@ -482,32 +537,85 @@ def available_robot():
     return df
 
 def robot_page(robot_name):
-    try:
-        col1, col2 = st.beta_columns(2)
-        df_dt = pull_distance(robot_name)
-        df_dt = df_dt.drop(columns=['robot_name'])
-        fig_dt = px.bar(df_dt, x='date', y='distance', 
-                        labels={
-                        "distance": "distance (km)"}, title=f'{robot_name} Weekly Usage')
-        with col1:
-            st.plotly_chart(fig_dt,use_container_width=True)
-        num_mission = number_mission(robot_name)
-        epm = error_per_mission(robot_name)
-        st.success(f"`{robot_name}` has ran {num_mission} missions in total. It usually has {epm} error per mission. ")
-        with col2:
-            st.plotly_chart(error_pie(robot_name),use_container_width=True)
-        
-        ml = get_mission_log(robot_name)
-        st.subheader(f"{robot_name}'s mission log")
-        st.write(ml)
-        st.markdown(create_download_link(ml, robot_name=robot_name, title=f"Download {robot_name}'s mission log as CSV", streamlit='True'), unsafe_allow_html=True)
-        
-        st.subheader(f"{robot_name}'s error log")
-        st.write(error_log(robot_name))
-        st.markdown(create_download_link(error_log(robot_name), robot_name=robot_name, title=f"Download {robot_name}'s error log as CSV", streamlit='True'), unsafe_allow_html=True)
+# try:
+    start_date = st.sidebar.date_input('Start Date', three_days_ago)
+    end_date = st.sidebar.date_input('End Date', today)
+    delta_date = (end_date - start_date).days
 
-    except:
-        st.warning(f"Oops, `{robot_name}` is not available at the moment.")
+
+    st.subheader(f'{robot_name} Mission Count Over Last {delta_date} Days')
+    fig_robot_mission_count = px.bar(get_robot_mission_count(robot_name), x='date', y='count', 
+                                        title=f'{robot_name} Mission Count over the {delta_date} days', 
+                                        color='state',
+                                        color_discrete_map={
+                                                "Aborted":"#EF553B",
+                                                "Done" : "#00CC96"
+                                                    }, 
+                                        barmode='group')
+
+    fig_robot_mission_count.update_layout(xaxis_range=[start_date, end_date])      
+    st.plotly_chart(fig_robot_mission_count, use_container_width=True)
+
+
+    st.subheader(f'{robot_name} Has Traveled Over Last {delta_date} Days')                    
+    df_dt = pull_distance(robot_name)
+    fig_dt = px.bar(df_dt, x='date', y='distance', 
+                    labels={
+                    "distance": "distance (km)"}, title=f'{robot_name} Milage over the {delta_date} days')
+    fig_dt.update_layout(xaxis_range=[start_date, end_date])
+    st.plotly_chart(fig_dt,use_container_width=True)
+
+
+    st.subheader(f'{robot_name} Errors Over Last {delta_date} Days')
+    fig_error_bar = px.bar(robot_last_error_time(robot_name,delta_date), x='time', y='count', color="module",
+                                            barmode='group',
+                                            color_discrete_map={
+                                                "AMCL":"rgb(27,158,119)",
+                                                "Planner":"rgb(217,95,2)",
+                                                "Mapping":"rgb(117,112,179)",
+                                                "/Sensors/3D camera (Left)/Connection":"rgb(255,51,51)",
+                                                "/Sensors/3D camera (Right)/Connection":"rgb(255,153,51)",
+                                                "/Sensors/3D camera (Left)/Metrics":"rgb(255,255,0)",
+                                                "/Sensors/3D camera (Right)/Metrics":"rgb(0,204,0)",
+                                                "MissionController": "rgb(0,204,102)",
+                                                "/Power System/Battery": "rgb(0,204,204)",
+                                                "/Power System/Charger": "rgb(0,128,255)",
+                                                "/Safety System/Emergency Stop": "rgb(51,51,255)"
+                                                        })
+    fig_error_bar.update_layout(xaxis_range=[start_date, end_date])
+    st.plotly_chart(fig_error_bar,use_container_width=True)  
+
+    st.subheader(f'{robot_name} Errors Over Last {delta_date} Days')
+    fig_error_pie = px.pie(robot_last_error(robot_name,delta_date), values='count', names='module',
+                                            hole=0.3,
+                                            color_discrete_map={
+                                                "AMCL":"rgb(27,158,119)",
+                                                "Planner":"rgb(217,95,2)",
+                                                "Mapping":"rgb(117,112,179)",
+                                                "/Sensors/3D camera (Left)/Connection":"rgb(255,51,51)",
+                                                "/Sensors/3D camera (Right)/Connection":"rgb(255,153,51)",
+                                                "/Sensors/3D camera (Left)/Metrics":"rgb(255,255,0)",
+                                                "/Sensors/3D camera (Right)/Metrics":"rgb(0,204,0)",
+                                                "MissionController": "rgb(0,204,102)",
+                                                "/Power System/Battery": "rgb(0,204,204)",
+                                                "/Power System/Charger": "rgb(0,128,255)",
+                                                "/Safety System/Emergency Stop": "rgb(51,51,255)"
+                                                        })
+    fig_error_pie.update_traces(textinfo='percent+value')
+    fig_error_pie.update_layout(xaxis_range=[start_date, end_date])
+    st.plotly_chart(fig_error_pie,use_container_width=True)        
+
+    # ml = get_mission_log(robot_name)
+    # st.subheader(f"{robot_name}'s mission log")
+    # st.write(ml)
+    # st.markdown(create_download_link(ml, robot_name=robot_name, title=f"Download {robot_name}'s mission log as CSV", streamlit='True'), unsafe_allow_html=True)
+    
+    # st.subheader(f"{robot_name}'s error log")
+    # st.write(error_log(robot_name))
+    # st.markdown(create_download_link(error_log(robot_name), robot_name=robot_name, title=f"Download {robot_name}'s error log as CSV", streamlit='True'), unsafe_allow_html=True)
+    st.write(get_robot_mission_count(robot_name))
+        # except:
+        #     st.warning(f"Oops, `{robot_name}` is not available at the moment.")
     
 
 def fleet_page():
@@ -734,7 +842,28 @@ def fleet_page():
         if checkbox_utilization_robot_type:
             st.write(get_robot_type_utilization())
 
-    
+        ###################### Distance Per Robot ######################
+        st.subheader(f'Robots Traveled Distance Per Robot over {delta_date} Days')
+        fig_distance_robot = px.bar(get_all_robots_distance(), x='date', y='distance',
+                color='robot_name', labels={'distance':'Distance (km)'},
+                barmode='group', title='Distance Traveled Per Robots')
+        fig_distance_robot.update_layout(xaxis_range=[start_date, end_date])
+        st.plotly_chart(fig_distance_robot,use_container_width=True)
+        checkbox_dist_robot = st.checkbox("Show Data", key='checkbox_dist_robot')
+        if checkbox_dist_robot:
+            st.write(get_all_robots_distance())
+
+        ###################### Distance Per Robot Type ######################
+        st.subheader(f'Robots Traveled Distance Per Robot Type over {delta_date} Days')
+        fig_distance_type = px.bar(get_all_robots_distance_type(), x='date', y='distance',
+                color='robot_type', labels={'distance':'Distance (km)'},
+                barmode='group', title='Distance Traveled Per Robots Type')
+        fig_distance_type.update_layout(xaxis_range=[start_date, end_date])
+        st.plotly_chart(fig_distance_type,use_container_width=True)
+        checkbox_dist_robot_type = st.checkbox("Show Data", key='checkbox_dist_robot_type')
+        if checkbox_dist_robot_type:
+            st.write(get_all_robots_distance_type())
+
         ###################### MiR Testing ######################
         # st.subheader(f'MiR Testing Over Last {delta_date} Days')
         # fig_test_count = px.bar(MiR200_test_count(), x='date', y='count',
