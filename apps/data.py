@@ -538,74 +538,78 @@ def available_robot():
 
 def robot_page(robot_name):
 # try:
+    
     start_date = st.sidebar.date_input('Start Date', three_days_ago)
     end_date = st.sidebar.date_input('End Date', today)
     delta_date = (end_date - start_date).days
+    if delta_date >= 0:
 
-
-    st.subheader(f'{robot_name} Mission Count Over Last {delta_date} Days')
-    fig_robot_mission_count = px.bar(get_robot_mission_count(robot_name), x='date', y='count', 
-                                        title=f'{robot_name} Mission Count over the {delta_date} days', 
-                                        color='state',
-                                        color_discrete_map={
-                                                "Aborted":"#EF553B",
-                                                "Done" : "#00CC96"
-                                                    }, 
-                                        barmode='group')
-
-    fig_robot_mission_count.update_layout(xaxis_range=[start_date, end_date])      
-    st.plotly_chart(fig_robot_mission_count, use_container_width=True)
-
-
-    st.subheader(f'{robot_name} Has Traveled Over Last {delta_date} Days')                    
-    df_dt = pull_distance(robot_name)
-    fig_dt = px.bar(df_dt, x='date', y='distance', 
-                    labels={
-                    "distance": "distance (km)"}, title=f'{robot_name} Milage over the {delta_date} days')
-    fig_dt.update_layout(xaxis_range=[start_date, end_date])
-    st.plotly_chart(fig_dt,use_container_width=True)
-
-
-    st.subheader(f'{robot_name} Errors Over Last {delta_date} Days')
-    fig_error_bar = px.bar(robot_last_error_time(robot_name,delta_date), x='time', y='count', color="module",
-                                            barmode='group',
+        st.subheader(f'{robot_name} Mission Count Over Last {delta_date} Days')
+        fig_robot_mission_count = px.bar(get_robot_mission_count(robot_name), x='date', y='count', 
+                                            title=f'{robot_name} Mission Count over the {delta_date} days', 
+                                            color='state',
                                             color_discrete_map={
-                                                "AMCL":"rgb(27,158,119)",
-                                                "Planner":"rgb(217,95,2)",
-                                                "Mapping":"rgb(117,112,179)",
-                                                "/Sensors/3D camera (Left)/Connection":"rgb(255,51,51)",
-                                                "/Sensors/3D camera (Right)/Connection":"rgb(255,153,51)",
-                                                "/Sensors/3D camera (Left)/Metrics":"rgb(255,255,0)",
-                                                "/Sensors/3D camera (Right)/Metrics":"rgb(0,204,0)",
-                                                "MissionController": "rgb(0,204,102)",
-                                                "/Power System/Battery": "rgb(0,204,204)",
-                                                "/Power System/Charger": "rgb(0,128,255)",
-                                                "/Safety System/Emergency Stop": "rgb(51,51,255)"
-                                                        })
-    fig_error_bar.update_layout(xaxis_range=[start_date, end_date])
-    st.plotly_chart(fig_error_bar,use_container_width=True)  
+                                                    "Aborted":"#EF553B",
+                                                    "Done" : "#00CC96"
+                                                        }, 
+                                            barmode='group')
 
-    st.subheader(f'{robot_name} Errors Over Last {delta_date} Days')
-    fig_error_pie = px.pie(robot_last_error(robot_name,delta_date), values='count', names='module',
-                                            hole=0.3,
-                                            color_discrete_map={
-                                                "AMCL":"rgb(27,158,119)",
-                                                "Planner":"rgb(217,95,2)",
-                                                "Mapping":"rgb(117,112,179)",
-                                                "/Sensors/3D camera (Left)/Connection":"rgb(255,51,51)",
-                                                "/Sensors/3D camera (Right)/Connection":"rgb(255,153,51)",
-                                                "/Sensors/3D camera (Left)/Metrics":"rgb(255,255,0)",
-                                                "/Sensors/3D camera (Right)/Metrics":"rgb(0,204,0)",
-                                                "MissionController": "rgb(0,204,102)",
-                                                "/Power System/Battery": "rgb(0,204,204)",
-                                                "/Power System/Charger": "rgb(0,128,255)",
-                                                "/Safety System/Emergency Stop": "rgb(51,51,255)"
-                                                        })
-    fig_error_pie.update_traces(textinfo='percent+value')
-    fig_error_pie.update_layout(xaxis_range=[start_date, end_date])
-    st.plotly_chart(fig_error_pie,use_container_width=True)        
-        # except:
-        #     st.warning(f"Oops, `{robot_name}` is not available at the moment.")
+        fig_robot_mission_count.update_layout(xaxis_range=[start_date, end_date])      
+        st.plotly_chart(fig_robot_mission_count, use_container_width=True)
+
+
+        st.subheader(f'{robot_name} Has Traveled Over Last {delta_date} Days')                    
+        df_dt = pull_distance(robot_name)
+        fig_dt = px.bar(df_dt, x='date', y='distance', 
+                        labels={
+                        "distance": "distance (km)"}, title=f'{robot_name} Milage over the {delta_date} days')
+        fig_dt.update_layout(xaxis_range=[start_date, end_date])
+        st.plotly_chart(fig_dt,use_container_width=True)
+
+
+        st.subheader(f'{robot_name} Errors Over Last {delta_date} Days')
+        fig_error_bar = px.bar(robot_last_error_time(robot_name,delta_date), x='time', y='count', color="module",
+                                                barmode='group',
+                                                color_discrete_map={
+                                                    "AMCL":"rgb(27,158,119)",
+                                                    "Planner":"rgb(217,95,2)",
+                                                    "Mapping":"rgb(117,112,179)",
+                                                    "/Sensors/3D camera (Left)/Connection":"rgb(255,51,51)",
+                                                    "/Sensors/3D camera (Right)/Connection":"rgb(255,153,51)",
+                                                    "/Sensors/3D camera (Left)/Metrics":"rgb(255,255,0)",
+                                                    "/Sensors/3D camera (Right)/Metrics":"rgb(0,204,0)",
+                                                    "MissionController": "rgb(0,204,102)",
+                                                    "/Power System/Battery": "rgb(0,204,204)",
+                                                    "/Power System/Charger": "rgb(0,128,255)",
+                                                    "/Safety System/Emergency Stop": "rgb(51,51,255)"
+                                                            })
+        fig_error_bar.update_layout(xaxis_range=[start_date, end_date])
+        st.plotly_chart(fig_error_bar,use_container_width=True)  
+
+        st.subheader(f'{robot_name} Errors Over Last {delta_date} Days')
+        fig_error_pie = px.pie(robot_last_error(robot_name,delta_date), values='count', names='module',
+                                                hole=0.3,
+                                                color_discrete_map={
+                                                    "AMCL":"rgb(27,158,119)",
+                                                    "Planner":"rgb(217,95,2)",
+                                                    "Mapping":"rgb(117,112,179)",
+                                                    "/Sensors/3D camera (Left)/Connection":"rgb(255,51,51)",
+                                                    "/Sensors/3D camera (Right)/Connection":"rgb(255,153,51)",
+                                                    "/Sensors/3D camera (Left)/Metrics":"rgb(255,255,0)",
+                                                    "/Sensors/3D camera (Right)/Metrics":"rgb(0,204,0)",
+                                                    "MissionController": "rgb(0,204,102)",
+                                                    "/Power System/Battery": "rgb(0,204,204)",
+                                                    "/Power System/Charger": "rgb(0,128,255)",
+                                                    "/Safety System/Emergency Stop": "rgb(51,51,255)"
+                                                            })
+        fig_error_pie.update_traces(textinfo='percent+value')
+        fig_error_pie.update_layout(xaxis_range=[start_date, end_date])
+        st.plotly_chart(fig_error_pie,use_container_width=True)        
+            # except:
+            #     st.warning(f"Oops, `{robot_name}` is not available at the moment.")
+    else:
+        st.balloons()
+        st.error("Error! The input **Start Date** is later than the **End Date**")
     
 
 def fleet_page():
@@ -620,6 +624,40 @@ def fleet_page():
     end_date = st.sidebar.date_input('End Date', today)
     delta_date = (end_date - start_date).days
     if delta_date >= 0:
+
+        ###################### MiR500s ######################
+        st.subheader(f'MiR 500 Pallet Count Over Last {delta_date} Days')
+        fig_500 = px.bar(pallet_move_count(), x='date', y='count',title='Mission Count (Pallet)',
+                            color_discrete_map={
+                                                "Aborted":"#EF553B",
+                                                "Done" : "#00CC96"
+                                                    },
+                            color='state', barmode='group')
+
+        # fig_500.update_xaxes(
+        #     rangeslider_visible=True,
+        #     rangeselector=dict(
+        #         buttons=list([
+        #             dict(count=7, label="7d", step="day", stepmode="backward"),
+        #             dict(count=3, label="3m", step="month", stepmode="backward"),
+        #             dict(count=6, label="6m", step="month", stepmode="backward"),
+        #             dict(count=1, label="YTD", step="year", stepmode="todate"),
+        #             dict(count=1, label="1y", step="year", stepmode="backward"),
+        #             dict(step="all")
+        #         ])
+        #     )
+        # )
+        # fig_500.update_traces(textposition='outside')
+        fig_500.update_layout(xaxis_range=[start_date, end_date])
+        fig_500.update_xaxes(showgrid=True)
+        fig_500.update_yaxes(showgrid=True)
+        st.plotly_chart(fig_500,use_container_width=True,config=config)
+        
+        checkbox_500 = st.checkbox("Show Data", key='checkbox_500')
+        if checkbox_500:
+            st.table(unstacking(pallet_move()))
+            st.write(pallet_move())
+
         ###################### MISSION COUNT (NAME) ######################
         st.subheader(f'Mission Count (Per Robot) Over Last {delta_date} Days')
         robots_mission_type = groupby_mission_count("robot_name")
@@ -721,38 +759,7 @@ def fleet_page():
             st.table(unstacking(cart_move()))
             st.write(cart_move())
             
-        ###################### MiR500s ######################
-        st.subheader(f'MiR 500 Pallet Count Over Last {delta_date} Days')
-        fig_500 = px.bar(pallet_move_count(), x='date', y='count',title='Mission Count (Pallet)',
-                            color_discrete_map={
-                                                "Aborted":"#EF553B",
-                                                "Done" : "#00CC96"
-                                                    },
-                            color='state', barmode='group')
 
-        # fig_500.update_xaxes(
-        #     rangeslider_visible=True,
-        #     rangeselector=dict(
-        #         buttons=list([
-        #             dict(count=7, label="7d", step="day", stepmode="backward"),
-        #             dict(count=3, label="3m", step="month", stepmode="backward"),
-        #             dict(count=6, label="6m", step="month", stepmode="backward"),
-        #             dict(count=1, label="YTD", step="year", stepmode="todate"),
-        #             dict(count=1, label="1y", step="year", stepmode="backward"),
-        #             dict(step="all")
-        #         ])
-        #     )
-        # )
-        # fig_500.update_traces(textposition='outside')
-        fig_500.update_layout(xaxis_range=[start_date, end_date])
-        fig_500.update_xaxes(showgrid=True)
-        fig_500.update_yaxes(showgrid=True)
-        st.plotly_chart(fig_500,use_container_width=True,config=config)
-        
-        checkbox_500 = st.checkbox("Show Data", key='checkbox_500')
-        if checkbox_500:
-            st.table(unstacking(pallet_move()))
-            st.write(pallet_move())
 
         ###################### Utilization_robots ######################
         st.subheader(f'Utilization Per Robot Over Last {delta_date} Days')
